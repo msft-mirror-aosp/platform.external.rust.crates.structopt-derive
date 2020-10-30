@@ -36,7 +36,7 @@ rust_test_host {
 //   proc-macro-error-attr-1.0.4
 //   proc-macro2-1.0.24 "default,proc-macro"
 //   quote-1.0.7 "default,proc-macro"
-//   syn-1.0.42 "clone-impls,default,derive,full,parsing,printing,proc-macro,quote"
+//   syn-1.0.48 "clone-impls,default,derive,full,parsing,printing,proc-macro,quote"
 //   unicode-segmentation-1.6.0
 //   unicode-xid-0.2.1 "default"
 //   version_check-0.9.2
