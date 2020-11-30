@@ -11,6 +11,9 @@
 //! for the usage of `#[derive(StructOpt)]`.
 
 #![allow(clippy::large_enum_variant)]
+// FIXME: remove when and if our MSRV hits 1.42
+#![allow(clippy::match_like_matches_macro)]
+#![forbid(unsafe_code)]
 
 extern crate proc_macro;
 
@@ -28,7 +31,7 @@ use crate::{
 
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::{abort, abort_call_site, proc_macro_error, set_dummy};
-use quote::{quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned};
 use syn::{punctuated::Punctuated, spanned::Spanned, token::Comma, *};
 
 /// Default casing style for generated arguments.
@@ -239,6 +242,16 @@ fn gen_augmentation(
 }
 
 fn gen_constructor(fields: &Punctuated<Field, Comma>, parent_attribute: &Attrs) -> TokenStream {
+    // This ident is used in several match branches below,
+    // and the `quote[_spanned]` invocations have different spans.
+    //
+    // Given that this ident is used in several places and
+    // that the branches are located inside of a loop, it is possible that
+    // this ident will be given _different_ spans in different places, and
+    // thus will not be the _same_ ident anymore. To make sure the `matches`
+    // is always the same, we factor it out.
+    let matches = format_ident!("matches");
+
     let fields = fields.iter().map(|field| {
         let attrs = Attrs::from_field(
             field,
@@ -265,13 +278,13 @@ fn gen_constructor(fields: &Punctuated<Field, Comma>, parent_attribute: &Attrs) 
                 };
                 quote_spanned! { kind.span()=>
                     #field_name: <#subcmd_type as ::structopt::StructOptInternal>::from_subcommand(
-                        matches.subcommand())
+                        #matches.subcommand())
                         #unwrapper
                 }
             }
 
             Kind::Flatten => quote_spanned! { kind.span()=>
-                #field_name: ::structopt::StructOpt::from_clap(matches)
+                #field_name: ::structopt::StructOpt::from_clap(#matches)
             },
 
             Kind::Skip(val) => match val {
@@ -318,24 +331,24 @@ fn gen_constructor(fields: &Punctuated<Field, Comma>, parent_attribute: &Attrs) 
                 let occurrences = *attrs.parser().kind == ParserKind::FromOccurrences;
                 let name = attrs.cased_name();
                 let field_value = match **ty {
-                    Ty::Bool => quote_spanned!(ty.span()=> matches.is_present(#name)),
+                    Ty::Bool => quote_spanned!(ty.span()=> #matches.is_present(#name)),
 
                     Ty::Option => quote_spanned! { ty.span()=>
-                        matches.#value_of(#name)
+                        #matches.#value_of(#name)
                             .map(#parse)
                     },
 
                     Ty::OptionOption => quote_spanned! { ty.span()=>
-                        if matches.is_present(#name) {
-                            Some(matches.#value_of(#name).map(#parse))
+                        if #matches.is_present(#name) {
+                            Some(#matches.#value_of(#name).map(#parse))
                         } else {
                             None
                         }
                     },
 
                     Ty::OptionVec => quote_spanned! { ty.span()=>
-                        if matches.is_present(#name) {
-                            Some(matches.#values_of(#name)
+                        if #matches.is_present(#name) {
+                            Some(#matches.#values_of(#name)
                                  .map_or_else(Vec::new, |v| v.map(#parse).collect()))
                         } else {
                             None
@@ -343,20 +356,20 @@ fn gen_constructor(fields: &Punctuated<Field, Comma>, parent_attribute: &Attrs) 
                     },
 
                     Ty::Vec => quote_spanned! { ty.span()=>
-                        matches.#values_of(#name)
+                        #matches.#values_of(#name)
                             .map_or_else(Vec::new, |v| v.map(#parse).collect())
                     },
 
                     Ty::Other if occurrences => quote_spanned! { ty.span()=>
-                        #parse(matches.#value_of(#name))
+                        #parse(#matches.#value_of(#name))
                     },
 
                     Ty::Other if flag => quote_spanned! { ty.span()=>
-                        #parse(matches.is_present(#name))
+                        #parse(#matches.is_present(#name))
                     },
 
                     Ty::Other => quote_spanned! { ty.span()=>
-                        matches.#value_of(#name)
+                        #matches.#value_of(#name)
                             .map(#parse)
                             .unwrap()
                     },
@@ -471,8 +484,9 @@ fn gen_augment_clap_enum(
         let kind = attrs.kind();
         match &*kind {
             Kind::ExternalSubcommand => {
+                let app_var = Ident::new("app", Span::call_site());
                 quote_spanned! { attrs.kind().span()=>
-                    let app = app.setting(
+                    let #app_var = #app_var.setting(
                         ::structopt::clap::AppSettings::AllowExternalSubcommands
                     );
                 }
@@ -549,7 +563,8 @@ fn gen_from_clap_enum(name: &Ident) -> TokenStream {
     quote! {
         fn from_clap(matches: &::structopt::clap::ArgMatches) -> Self {
             <#name as ::structopt::StructOptInternal>::from_subcommand(matches.subcommand())
-                .unwrap()
+                .expect("structopt misuse: You likely tried to #[flatten] a struct \
+                         that contains #[subcommand]. This is forbidden.")
         }
     }
 }
@@ -648,10 +663,10 @@ fn gen_from_subcommand(
                 }
 
                 (external, None) => {
-                    ::std::option::Option::Some(#name::#var_name({
+                    ::std::option::Option::Some(#name::#var_name(
                         ::std::iter::once(#str_ty::from(external))
                             .collect::<::std::vec::Vec<_>>()
-                    }))
+                    ))
                 }
             }
         },
@@ -720,7 +735,7 @@ fn gen_from_subcommand(
 #[cfg(feature = "paw")]
 fn gen_paw_impl(name: &Ident) -> TokenStream {
     quote! {
-        impl paw::ParseArgs for #name {
+        impl ::structopt::paw::ParseArgs for #name {
             type Error = std::io::Error;
 
             fn parse_args() -> std::result::Result<Self, Self::Error> {
