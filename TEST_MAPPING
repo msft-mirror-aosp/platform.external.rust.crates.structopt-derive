@@ -5,6 +5,11 @@
       "path": "external/rust/crates/base64"
     }
   ],
+  "postsubmit": [
+    {
+      "name": "authfs_device_test_src_lib"
+    }
+  ],
   "presubmit": [
     {
       "name": "authfs_device_test_src_lib"
