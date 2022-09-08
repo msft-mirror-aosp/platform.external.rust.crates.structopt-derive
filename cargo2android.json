@@ -1,4 +1,4 @@
 {
   "run": true,
-  "tests": true
+  "patch": "patches/0001-Use-heck-0.3.3.patch"
 }
