@@ -47,7 +47,7 @@ rust_proc_macro {
     srcs: ["src/lib.rs"],
     edition: "2018",
     rustlibs: [
-        "libheck",
+        "libheck_deprecated",
         "libproc_macro2",
         "libproc_macro_error",
         "libquote",
