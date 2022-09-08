@@ -1,0 +1,30 @@
+From bde791c5d4b5744bf060152e37fea18dfc5556ce Mon Sep 17 00:00:00 2001
+From: Matthew Maurer <mmaurer@google.com>
+Date: Wed, 7 Sep 2022 16:35:34 -0700
+Subject: [PATCH] Use heck-0.3.3
+
+Structopt is EOL and will not update to 0.4
+The plan for migrating off is to delete structopt after migrating
+clients to clap + clap-derive
+
+Change-Id: I091b43aa4200873119af990be9a5d6dd6907a40b
+---
+ Android.bp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Android.bp b/Android.bp
+index e008611..9e35e36 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -47,7 +47,7 @@ rust_proc_macro {
+     srcs: ["src/lib.rs"],
+     edition: "2018",
+     rustlibs: [
+-        "libheck",
++        "libheck_deprecated",
+         "libproc_macro2",
+         "libproc_macro_error",
+         "libquote",
+-- 
+2.37.2.789.g6183377224-goog
+
