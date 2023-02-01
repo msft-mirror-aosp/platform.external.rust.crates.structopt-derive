@@ -4,15 +4,5 @@
     {
       "path": "external/rust/crates/base64"
     }
-  ],
-  "presubmit": [
-    {
-      "name": "authfs_device_test_src_lib"
-    }
-  ],
-  "presubmit-rust": [
-    {
-      "name": "authfs_device_test_src_lib"
-    }
   ]
 }
