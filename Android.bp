@@ -41,6 +41,7 @@ license {
 
 rust_proc_macro {
     name: "libstructopt_derive",
+    // has rustc warnings
     crate_name: "structopt_derive",
     cargo_env_compat: true,
     cargo_pkg_version: "0.4.18",
@@ -53,4 +54,6 @@ rust_proc_macro {
         "libquote",
         "libsyn",
     ],
+    product_available: true,
+    vendor_available: true,
 }
